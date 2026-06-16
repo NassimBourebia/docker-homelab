@@ -1,0 +1,19 @@
+services:
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    restart: unless-stopped
+    volumes:
+      - ./config:/app/config
+    networks:
+      traefik-network:
+        ipv4_address: 172.20.0.3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.homepage.rule=Host(`homepage.lan`)"
+      - "traefik.http.routers.homepage.entrypoints=web"
+      - "traefik.http.services.homepage.loadbalancer.server.port=3000"
+
+networks:
+  traefik-network:
+    external: true

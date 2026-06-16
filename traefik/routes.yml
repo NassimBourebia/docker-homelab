@@ -1,0 +1,13 @@
+http:
+  routers:
+    homepage:
+      rule: "Host(`homepage.lan`)"
+      entrypoints:
+        - web
+      service: homepage
+
+  services:
+    homepage:
+      loadBalancer:
+        servers:
+          - url: "http://172.20.0.3:3000"
