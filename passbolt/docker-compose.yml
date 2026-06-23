@@ -1,0 +1,63 @@
+﻿
+services:
+  db:
+    image: mariadb:10.11
+    container_name: passbolt-db
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - passbolt_db:/var/lib/mysql
+    networks:
+      - passbolt-network
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  passbolt:
+    image: passbolt/passbolt:5.13.0-1-ce-non-root
+    container_name: passbolt
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      APP_FULL_BASE_URL: https://${PASSBOLT_DOMAIN}
+      DATASOURCES_DEFAULT_HOST: db
+      DATASOURCES_DEFAULT_USERNAME: ${DB_USER}
+      DATASOURCES_DEFAULT_PASSWORD: ${DB_PASSWORD}
+      DATASOURCES_DEFAULT_DATABASE: ${DB_NAME}
+    volumes:
+      - passbolt_gpg:/etc/passbolt/gpg
+      - passbolt_jwt:/etc/passbolt/jwt
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - traefik-network
+      - passbolt-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.passbolt.rule=Host(`${PASSBOLT_DOMAIN}`)"
+      - "traefik.http.routers.passbolt.entrypoints=websecure"
+      - "traefik.http.routers.passbolt.tls=true"
+      - "traefik.http.services.passbolt.loadbalancer.server.port=8080"
+
+volumes:
+  passbolt_db:
+  passbolt_gpg:
+  passbolt_jwt:
+
+networks:
+  passbolt-network:
+    name: passbolt-network
+    driver: bridge
+  traefik-network:
+    name: traefik-network
+    external: true
